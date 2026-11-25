@@ -23,7 +23,7 @@ DATABASE = os.environ.get(
 # Database connection
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DATABASE)
+        g.db = sqlite3.connect(DATABASE, timeout=10)
         g.db.row_factory = sqlite3.Row
 
     return g.db
@@ -39,7 +39,7 @@ def close_db(exception=None):
 
 # Create database table
 def init_db():
-    with sqlite3.connect(DATABASE) as db:
+    with sqlite3.connect(DATABASE, timeout=10) as db:
         db.execute("""
             CREATE TABLE IF NOT EXISTS students (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,6 +49,9 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+
+init_db()
 
 
 # Dashboard
@@ -166,8 +169,7 @@ def health():
 
 
 if __name__ == "__main__":
-    init_db()
-    port = int(os.environ.get("PORT", "5001"))
+    port = int(os.environ.get("PORT", "5000"))
     app.run(
         host="0.0.0.0",
         port=port,
