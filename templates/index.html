@@ -1,27 +1,30 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student & Course Management</title>
-    <link rel="stylesheet" href="../static/style.css">
+    <title>Student Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body data-role="{{ role }}" data-username="{{ username }}" data-student-id="{{ student_id or '' }}">
 
 <div class="app">
 
     <aside class="sidebar">
         <h2>Campus<span>Flow</span></h2>
-        <p class="side-label">MANAGEMENT</p>
-        <a class="nav active" href="#dashboard">▦ Dashboard</a>
-        <a class="nav" href="#students">♙ Students</a>
-        <a class="nav" href="#courses">▣ Courses</a>
-        <a class="nav" href="#enrollments">✎ Enrollments</a>
+        <p class="side-label">ACADEMICS</p>
+        <a class="nav active" href="#dashboard">▦ <span>Dashboard</span></a>
+        <a class="nav" href="#students">♙ <span>Students</span></a>
+        <a class="nav" href="#courses">▣ <span>Courses</span></a>
+        <a class="nav" href="#departments">🏛 <span>Departments</span></a>
+        <a class="nav" href="#attendance">✓ <span>Attendance</span></a>
+        <a class="nav" href="#exams">✎ <span>Exams &amp; Results</span></a>
+        <a class="nav" href="#fees">₹ <span>Fee Management</span></a>
 
         <div class="side-footer">
-            <p>Student Administration</p>
-            <small>Management Portal v1.0</small>
+            <p>{{ username }} ({{ role|capitalize }})</p>
+            <small>Student Management System</small>
+            <a href="{{ url_for('logout') }}" class="logout-link">Sign Out</a>
         </div>
     </aside>
 
@@ -30,35 +33,61 @@
         <header class="header" id="dashboard">
             <div>
                 <h1>Student Management System</h1>
-                <p>Manage students, courses and enrollments.</p>
+                <p>Manage students, courses, departments, attendance, examinations, and fees.</p>
             </div>
-            <span class="admin-badge">Administrator</span>
+            <div class="header-actions">
+                <span class="admin-badge">{{ role|capitalize }}: {{ username }}</span>
+            </div>
         </header>
 
-        <!-- DASHBOARD CARDS -->
+        <!-- DASHBOARD STATS -->
         <section class="stats">
             <div class="stat-card">
                 <p>Total Students</p>
-                <h2 id="totalStudents">0</h2>
-                <span>Registered students</span>
+                <h2 id="statStudents">0</h2>
+                <span id="statEnrollments">0 total enrollments</span>
             </div>
 
             <div class="stat-card">
-                <p>Total Courses</p>
-                <h2 id="totalCourses">0</h2>
-                <span>Available courses</span>
+                <p>Courses &amp; Depts</p>
+                <h2 id="statCourses">0</h2>
+                <span id="statDepartments">0 departments</span>
             </div>
 
             <div class="stat-card">
-                <p>Total Enrollments</p>
-                <h2 id="totalEnrollments">0</h2>
-                <span>Student course registrations</span>
+                <p>Average Attendance</p>
+                <h2 id="statAttendance">0%</h2>
+                <span id="statPerf">Avg Score: 0% (Pass: 0%)</span>
             </div>
 
             <div class="stat-card">
-                <p>Active Students</p>
-                <h2 id="activeStudents">0</h2>
-                <span>Currently registered</span>
+                <p>Fee Collection</p>
+                <h2 id="statFeeCollected">₹0</h2>
+                <span id="statFeePending">Pending: ₹0</span>
+            </div>
+        </section>
+
+        <!-- DASHBOARD OVERVIEW PANELS -->
+        <section class="panel">
+            <div class="panel-heading">
+                <div>
+                    <h2>Academic &amp; Financial Overview</h2>
+                    <p>Live summary of admissions, course distribution, and recent fee payments.</p>
+                </div>
+            </div>
+            <div class="detail-grid" id="dashboardOverviewGrid">
+                <div class="detail-item">
+                    <small>Recent Admissions</small>
+                    <div id="recentAdmissionsList">Loading...</div>
+                </div>
+                <div class="detail-item">
+                    <small>Recent Fee Payments</small>
+                    <div id="recentPaymentsList">Loading...</div>
+                </div>
+                <div class="detail-item" style="grid-column: 1 / -1;">
+                    <small>Course-wise Student Distribution</small>
+                    <div id="courseDistributionList">Loading...</div>
+                </div>
             </div>
         </section>
 
@@ -67,68 +96,121 @@
             <div class="panel-heading">
                 <div>
                     <h2>Student Management</h2>
-                    <p>Add, edit, search or remove student records.</p>
+                    <p>Add, view, search, filter, sort, edit, or remove student records.</p>
                 </div>
             </div>
 
+            {% if role == 'admin' %}
             <form id="studentForm" class="form-grid">
-                <input type="hidden" id="studentId">
+                <input type="hidden" id="stuEditId">
 
                 <div class="field">
-                    <label>Student Name</label>
-                    <input type="text" id="studentName" placeholder="Enter full name" required>
+                    <label for="stuCode">Student ID *</label>
+                    <input type="text" id="stuCode" placeholder="e.g. STU1003" required>
                 </div>
 
                 <div class="field">
-                    <label>Email</label>
-                    <input type="email" id="studentEmail" placeholder="student@email.com" required>
+                    <label for="stuName">Full Name *</label>
+                    <input type="text" id="stuName" placeholder="Enter full name" required>
                 </div>
 
                 <div class="field">
-                    <label>Student ID</label>
-                    <input type="text" id="rollNumber" placeholder="e.g. STU1001" required>
+                    <label for="stuEmail">Email *</label>
+                    <input type="email" id="stuEmail" placeholder="student@university.edu" required>
                 </div>
 
                 <div class="field">
-                    <label>Department</label>
-                    <select id="studentDepartment" required>
+                    <label for="stuPhone">Phone Number *</label>
+                    <input type="text" id="stuPhone" placeholder="+91-9876543210" required>
+                </div>
+
+                <div class="field">
+                    <label for="stuDob">Date of Birth *</label>
+                    <input type="date" id="stuDob" required>
+                </div>
+
+                <div class="field">
+                    <label for="stuGender">Gender *</label>
+                    <select id="stuGender" required>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label for="stuDepartment">Department *</label>
+                    <select id="stuDepartment" required>
                         <option value="">Select department</option>
-                        <option>Computer Science</option>
-                        <option>Data Science</option>
-                        <option>Artificial Intelligence</option>
-                        <option>Information Technology</option>
-                        <option>Business Administration</option>
-                        <option>Electronics</option>
                     </select>
                 </div>
 
                 <div class="field">
-                    <label>Year</label>
-                    <select id="studentYear" required>
-                        <option value="">Select year</option>
-                        <option>1st Year</option>
-                        <option>2nd Year</option>
-                        <option>3rd Year</option>
-                        <option>4th Year</option>
+                    <label for="stuCourse">Course *</label>
+                    <select id="stuCourse" required>
+                        <option value="">Select course</option>
                     </select>
                 </div>
 
                 <div class="field">
-                    <label>Status</label>
-                    <select id="studentStatus">
-                        <option>Active</option>
-                        <option>Inactive</option>
+                    <label for="stuSemester">Semester *</label>
+                    <input type="number" id="stuSemester" min="1" max="12" value="1" required>
+                </div>
+
+                <div class="field">
+                    <label for="stuAdmissionDate">Admission Date *</label>
+                    <input type="date" id="stuAdmissionDate" required>
+                </div>
+
+                <div class="field">
+                    <label for="stuAcademicYear">Academic Year *</label>
+                    <input type="text" id="stuAcademicYear" placeholder="e.g. 2026-2027" value="2026-2027" required>
+                </div>
+
+                <div class="field">
+                    <label for="stuStatus">Student Status</label>
+                    <select id="stuStatus">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Graduated">Graduated</option>
+                        <option value="Suspended">Suspended</option>
                     </select>
+                </div>
+
+                <div class="field" style="grid-column: 1 / -1;">
+                    <label for="stuAddress">Address</label>
+                    <input type="text" id="stuAddress" placeholder="Street, City, State">
                 </div>
 
                 <div class="form-buttons">
-                    <button type="submit" class="primary-btn" id="studentSubmit">+ Add Student</button>
-                    <button type="button" class="secondary-btn" id="cancelEdit" hidden>Cancel Edit</button>
+                    <button type="submit" class="primary-btn" id="stuSubmitBtn">+ Add Student</button>
+                    <button type="button" class="secondary-btn" id="cancelStuEdit" hidden>Cancel Edit</button>
                 </div>
             </form>
+            {% endif %}
 
-            <div class="toolbar">
-                <input type="search" id="studentSearch" placeholder="Search name, ID, email or department...">
+            <div class="toolbar filter-toolbar">
+                <input type="search" id="stuSearch" placeholder="Search name, Student ID, or email...">
+                <select id="stuFilterDept"><option value="">All Departments</option></select>
+                <select id="stuFilterCourse"><option value="">All Courses</option></select>
+                <select id="stuFilterSem">
+                    <option value="">All Semesters</option>
+                    <option value="1">Semester 1</option>
+                    <option value="2">Semester 2</option>
+                    <option value="3">Semester 3</option>
+                    <option value="4">Semester 4</option>
+                    <option value="5">Semester 5</option>
+                    <option value="6">Semester 6</option>
+                    <option value="7">Semester 7</option>
+                    <option value="8">Semester 8</option>
+                </select>
+                <select id="stuSort">
+                    <option value="newest">Sort: Newest</option>
+                    <option value="name_asc">Name (A-Z)</option>
+                    <option value="name_desc">Name (Z-A)</option>
+                    <option value="code_asc">Student ID</option>
+                    <option value="semester_asc">Semester</option>
+                </select>
             </div>
 
             <div class="table-wrap">
@@ -136,11 +218,11 @@
                     <thead>
                         <tr>
                             <th>STUDENT</th>
-                            <th>ID</th>
+                            <th>STUDENT ID</th>
                             <th>DEPARTMENT</th>
-                            <th>YEAR</th>
+                            <th>COURSE</th>
+                            <th>SEM</th>
                             <th>STATUS</th>
-                            <th>COURSES</th>
                             <th>ACTIONS</th>
                         </tr>
                     </thead>
@@ -154,86 +236,447 @@
             <div class="panel-heading">
                 <div>
                     <h2>Course Management</h2>
-                    <p>Create new courses and manage available courses.</p>
+                    <p>Manage academic courses, view enrolled counts, and assign students to courses.</p>
                 </div>
             </div>
 
+            {% if role == 'admin' %}
             <form id="courseForm" class="course-form">
-                <input type="hidden" id="courseId">
+                <input type="hidden" id="courseEditId">
 
                 <div class="field">
-                    <label>Course Name</label>
-                    <input id="courseName" placeholder="e.g. Machine Learning" required>
+                    <label for="courseCode">Course Code *</label>
+                    <input id="courseCode" placeholder="e.g. CS102" required>
                 </div>
 
                 <div class="field">
-                    <label>Course Code</label>
-                    <input id="courseCode" placeholder="e.g. DS301" required>
+                    <label for="courseName">Course Name *</label>
+                    <input id="courseName" placeholder="e.g. B.Tech Artificial Intelligence" required>
                 </div>
 
                 <div class="field">
-                    <label>Instructor</label>
-            <input id="courseInstructor" placeholder="Instructor name" required>
+                    <label for="courseDepartment">Department *</label>
+                    <select id="courseDepartment" required>
+                        <option value="">Select department</option>
+                    </select>
                 </div>
 
                 <div class="field">
-                    <label>Credits</label>
-                    <input id="courseCredits" type="number" min="1" max="10" value="3" required>
+                    <label for="courseDuration">Duration *</label>
+                    <input id="courseDuration" placeholder="e.g. 4 Years" value="4 Years" required>
                 </div>
 
-                <button class="primary-btn" id="courseSubmit" type="submit">+ Add Course</button>
-                <button type="button" class="secondary-btn" id="cancelCourseEdit" hidden>Cancel</button>
+                <div class="field">
+                    <label for="courseSemesters">Number of Semesters *</label>
+                    <input id="courseSemesters" type="number" min="1" max="12" value="8" required>
+                </div>
+
+                <div class="field">
+                    <label for="courseDesc">Course Description</label>
+                    <input id="courseDesc" placeholder="Brief overview of curriculum">
+                </div>
+
+                <div class="form-buttons">
+                    <button class="primary-btn" id="courseSubmitBtn" type="submit">+ Add Course</button>
+                    <button type="button" class="secondary-btn" id="cancelCourseEdit" hidden>Cancel Edit</button>
+                </div>
             </form>
+
+            <form id="enrollmentForm" class="enrollment-form">
+                <div class="field">
+                    <label for="enrollStudent">Assign Student</label>
+                    <select id="enrollStudent" required><option value="">Choose a student</option></select>
+                </div>
+                <div class="field">
+                    <label for="enrollCourse">To Course</label>
+                    <select id="enrollCourse" required><option value="">Choose a course</option></select>
+                </div>
+                <button class="primary-btn" type="submit">Enroll Student</button>
+            </form>
+            {% endif %}
+
+            <div class="toolbar filter-toolbar">
+                <input type="search" id="courseSearch" placeholder="Search courses by name or code...">
+                <select id="courseFilterDept"><option value="">All Departments</option></select>
+            </div>
 
             <div class="course-grid" id="courseGrid"></div>
         </section>
 
-        <!-- ENROLLMENT -->
-        <section class="panel" id="enrollments">
+        <!-- DEPARTMENT MANAGEMENT -->
+        <section class="panel" id="departments">
             <div class="panel-heading">
                 <div>
-                    <h2>Course Enrollment</h2>
-                    <p>Enroll students in courses or remove their course registrations.</p>
+                    <h2>Department Management</h2>
+                    <p>Create academic departments, assign courses, and view student headcounts.</p>
                 </div>
             </div>
 
-            <form id="enrollmentForm" class="enrollment-form">
+            {% if role == 'admin' %}
+            <form id="departmentForm" class="course-form">
+                <input type="hidden" id="deptEditId">
+
                 <div class="field">
-                    <label>Select Student</label>
-                    <select id="enrollStudent" required>
-                        <option value="">Choose a student</option>
-                    </select>
+                    <label for="deptName">Department Name *</label>
+                    <input id="deptName" placeholder="e.g. Electronics" required>
                 </div>
 
                 <div class="field">
-                    <label>Select Course</label>
-                    <select id="enrollCourse" required>
-                        <option value="">Choose a course</option>
-                    </select>
+                    <label for="deptCode">Department Code *</label>
+                    <input id="deptCode" placeholder="e.g. ECE" required>
                 </div>
 
-                <button class="primary-btn" type="submit">Enroll Student</button>
+                <div class="field">
+                    <label for="deptManager">Head of Department</label>
+                    <input id="deptManager" placeholder="e.g. Dr. Meera Iyer">
+                </div>
+
+                <div class="field">
+                    <label for="deptDesc">Description</label>
+                    <input id="deptDesc" placeholder="Academic focus and programs">
+                </div>
+
+                <div class="form-buttons">
+                    <button class="primary-btn" id="deptSubmitBtn" type="submit">+ Add Department</button>
+                    <button type="button" class="secondary-btn" id="cancelDeptEdit" hidden>Cancel Edit</button>
+                </div>
             </form>
+
+            <form id="assignCourseForm" class="enrollment-form">
+                <div class="field">
+                    <label for="assignCourseSelect">Select Course</label>
+                    <select id="assignCourseSelect" required><option value="">Choose a course</option></select>
+                </div>
+                <div class="field">
+                    <label for="assignDeptSelect">Assign to Department</label>
+                    <select id="assignDeptSelect" required><option value="">Choose a department</option></select>
+                </div>
+                <button class="primary-btn" type="submit">Assign Course</button>
+            </form>
+            {% endif %}
+
+            <div class="course-grid" id="departmentGrid"></div>
+        </section>
+
+        <!-- ATTENDANCE MANAGEMENT -->
+        <section class="panel" id="attendance">
+            <div class="panel-heading">
+                <div>
+                    <h2>Student Attendance Management</h2>
+                    <p>Mark daily attendance, filter by course/semester/date, and track attendance percentages.</p>
+                </div>
+            </div>
+
+            {% if role == 'admin' %}
+            <form id="attendanceForm" class="form-grid">
+                <div class="field">
+                    <label for="attStudent">Student *</label>
+                    <select id="attStudent" required><option value="">Choose a student</option></select>
+                </div>
+                <div class="field">
+                    <label for="attDate">Date *</label>
+                    <input type="date" id="attDate" required>
+                </div>
+                <div class="field">
+                    <label for="attStatus">Status *</label>
+                    <select id="attStatus" required>
+                        <option value="Present">Present</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Leave">Leave</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="attNotes">Notes</label>
+                    <input type="text" id="attNotes" placeholder="Optional remarks">
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="primary-btn">Record Attendance</button>
+                </div>
+            </form>
+            {% endif %}
+
+            <div class="toolbar filter-toolbar">
+                {% if role == 'admin' %}
+                <select id="attFilterCourse"><option value="">All Courses</option></select>
+                <select id="attFilterSem">
+                    <option value="">All Semesters</option>
+                    <option value="1">Sem 1</option><option value="2">Sem 2</option>
+                    <option value="3">Sem 3</option><option value="4">Sem 4</option>
+                    <option value="5">Sem 5</option><option value="6">Sem 6</option>
+                    <option value="7">Sem 7</option><option value="8">Sem 8</option>
+                </select>
+                {% endif %}
+                <input type="date" id="attFilterDate">
+                <button type="button" class="secondary-btn" id="attClearFilters">Clear Filters</button>
+            </div>
+
+            <div class="table-wrap" style="margin-bottom: 20px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>DATE</th>
+                            <th>STUDENT ID</th>
+                            <th>STUDENT</th>
+                            <th>COURSE</th>
+                            <th>SEM</th>
+                            <th>STATUS</th>
+                            <th>NOTES</th>
+                            {% if role == 'admin' %}<th>ACTIONS</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTable"></tbody>
+                </table>
+            </div>
+
+            <h3 class="sub-heading">Attendance Summary (%)</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>STUDENT ID</th>
+                            <th>STUDENT</th>
+                            <th>TOTAL DAYS</th>
+                            <th>PRESENT</th>
+                            <th>ABSENT</th>
+                            <th>LEAVE</th>
+                            <th>ATTENDANCE %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceSummaryTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- EXAMINATION & RESULT MANAGEMENT -->
+        <section class="panel" id="exams">
+            <div class="panel-heading">
+                <div>
+                    <h2>Examination &amp; Result Management</h2>
+                    <p id="gradingRulesText">Configurable grading scale loaded from server...</p>
+                </div>
+            </div>
+
+            {% if role == 'admin' %}
+            <form id="examForm" class="form-grid">
+                <div class="field">
+                    <label for="examCode">Exam Code *</label>
+                    <input type="text" id="examCode" placeholder="e.g. MID-CS101" required>
+                </div>
+                <div class="field">
+                    <label for="examName">Examination Name *</label>
+                    <input type="text" id="examName" placeholder="e.g. Mid-Term Examination" required>
+                </div>
+                <div class="field">
+                    <label for="examCourse">Course *</label>
+                    <select id="examCourse" required><option value="">Choose a course</option></select>
+                </div>
+                <div class="field">
+                    <label for="examSemester">Semester *</label>
+                    <input type="number" id="examSemester" min="1" max="12" value="1" required>
+                </div>
+                <div class="field">
+                    <label for="examDate">Exam Date *</label>
+                    <input type="date" id="examDate" required>
+                </div>
+                <div class="field">
+                    <label for="examMaxMarks">Max Marks *</label>
+                    <input type="number" id="examMaxMarks" min="1" step="0.5" value="100" required>
+                </div>
+                <div class="field">
+                    <label for="examPassMarks">Pass Marks *</label>
+                    <input type="number" id="examPassMarks" min="0" step="0.5" value="40" required>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="primary-btn">+ Add Examination</button>
+                </div>
+            </form>
+
+            <form id="resultForm" class="form-grid">
+                <div class="field">
+                    <label for="resExam">Examination *</label>
+                    <select id="resExam" required><option value="">Choose an exam</option></select>
+                </div>
+                <div class="field">
+                    <label for="resStudent">Student *</label>
+                    <select id="resStudent" required><option value="">Choose a student</option></select>
+                </div>
+                <div class="field">
+                    <label for="resMarks">Marks Obtained *</label>
+                    <input type="number" id="resMarks" min="0" step="0.5" required>
+                </div>
+                <div class="field">
+                    <label for="resRemarks">Remarks</label>
+                    <input type="text" id="resRemarks" placeholder="Optional remarks">
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="primary-btn">Save / Update Marks</button>
+                </div>
+            </form>
+            {% endif %}
+
+            <h3 class="sub-heading">Scheduled Examinations</h3>
+            <div class="table-wrap" style="margin-bottom: 20px;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CODE</th>
+                            <th>EXAMINATION</th>
+                            <th>COURSE</th>
+                            <th>SEM</th>
+                            <th>DATE</th>
+                            <th>MAX / PASS</th>
+                            {% if role == 'admin' %}<th>ACTIONS</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="examTable"></tbody>
+                </table>
+            </div>
+
+            <h3 class="sub-heading">Student Results</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>EXAM</th>
+                            <th>STUDENT ID</th>
+                            <th>STUDENT</th>
+                            <th>MARKS</th>
+                            <th>PERCENTAGE</th>
+                            <th>GRADE</th>
+                            <th>STATUS</th>
+                            {% if role == 'admin' %}<th>ACTIONS</th>{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="resultTable"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- FEES MANAGEMENT -->
+        <section class="panel" id="fees">
+            <div class="panel-heading">
+                <div>
+                    <h2>Student Fee Management</h2>
+                    <p>Manage course fee structures, record student fee payments, and track outstanding balances.</p>
+                </div>
+            </div>
+
+            {% if role == 'admin' %}
+            <form id="feeStructureForm" class="form-grid">
+                <div class="field">
+                    <label for="fsCourse">Course *</label>
+                    <select id="fsCourse" required><option value="">Choose a course</option></select>
+                </div>
+                <div class="field">
+                    <label for="fsSemester">Semester *</label>
+                    <input type="number" id="fsSemester" min="1" max="12" value="1" required>
+                </div>
+                <div class="field">
+                    <label for="fsYear">Academic Year *</label>
+                    <input type="text" id="fsYear" value="2026-2027" required>
+                </div>
+                <div class="field">
+                    <label for="fsTuition">Tuition Fee (₹) *</label>
+                    <input type="number" id="fsTuition" min="0" step="0.01" value="40000" required>
+                </div>
+                <div class="field">
+                    <label for="fsLab">Lab Fee (₹)</label>
+                    <input type="number" id="fsLab" min="0" step="0.01" value="5000">
+                </div>
+                <div class="field">
+                    <label for="fsLibrary">Library &amp; Other Fee (₹)</label>
+                    <input type="number" id="fsLibrary" min="0" step="0.01" value="2500">
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="primary-btn">+ Save Fee Structure</button>
+                </div>
+            </form>
+
+            <form id="feePaymentForm" class="form-grid">
+                <div class="field">
+                    <label for="fpStudent">Student *</label>
+                    <select id="fpStudent" required><option value="">Choose a student</option></select>
+                </div>
+                <div class="field">
+                    <label for="fpSemester">Semester *</label>
+                    <input type="number" id="fpSemester" min="1" max="12" value="1" required>
+                </div>
+                <div class="field">
+                    <label for="fpYear">Academic Year *</label>
+                    <input type="text" id="fpYear" value="2026-2027" required>
+                </div>
+                <div class="field">
+                    <label for="fpTotalDue">Total Fee Due (₹) *</label>
+                    <input type="number" id="fpTotalDue" min="1" step="0.01" value="47500" required>
+                </div>
+                <div class="field">
+                    <label for="fpAmountPaid">Initial Payment (₹) *</label>
+                    <input type="number" id="fpAmountPaid" min="0" step="0.01" value="0" required>
+                </div>
+                <div class="field">
+                    <label for="fpMethod">Payment Method</label>
+                    <select id="fpMethod">
+                        <option value="Online">Online / UPI</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Card">Card</option>
+                        <option value="Cash">Cash</option>
+                    </select>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" class="primary-btn">Generate Fee Record</button>
+                </div>
+            </form>
+            {% endif %}
+
+            <div class="toolbar filter-toolbar">
+                {% if role == 'admin' %}
+                <input type="search" id="feeSearch" placeholder="Search by Student ID or name...">
+                {% endif %}
+                <select id="feeFilterStatus">
+                    <option value="">All Fee Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Partial">Partial</option>
+                    <option value="Paid">Paid</option>
+                </select>
+            </div>
 
             <div class="table-wrap">
                 <table>
                     <thead>
                         <tr>
-                            <th>STUDENT</th>
                             <th>STUDENT ID</th>
-                            <th>ENROLLED COURSES</th>
+                            <th>STUDENT</th>
+                            <th>SEM / YEAR</th>
+                            <th>TOTAL DUE</th>
+                            <th>PAID</th>
+                            <th>BALANCE</th>
+                            <th>STATUS</th>
+                            {% if role == 'admin' %}<th>ACTIONS</th>{% endif %}
                         </tr>
                     </thead>
-                    <tbody id="enrollmentTable"></tbody>
+                    <tbody id="feeTable"></tbody>
                 </table>
             </div>
         </section>
 
-        <footer>CampusFlow © 2026 | Student & Course Management System</footer>
+        <footer>CampusFlow © 2026 | Student Management System</footer>
 
     </main>
 </div>
 
-<script src="script.js"></script>
+<!-- DETAIL MODAL -->
+<div id="detailModal" class="modal-backdrop" hidden>
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3 id="modalTitle">Details</h3>
+            <button type="button" class="secondary-btn" id="modalCloseBtn">Close</button>
+        </div>
+        <div id="modalBody" class="modal-body"></div>
+    </div>
+</div>
+
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

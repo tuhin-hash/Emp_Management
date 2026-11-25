@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | Student Management System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+    <div class="login-card">
+        <div class="login-brand">
+            <h2>Campus<span>Flow</span></h2>
+            <p>Student Management System</p>
+        </div>
+
+        {% if error %}
+        <div class="alert-banner error">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}" class="login-form">
+            <div class="field">
+                <label for="username">Username or Email</label>
+                <input id="username" name="username" type="text" placeholder="Enter username or email" required autofocus>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" name="password" type="password" placeholder="Enter password" required>
+            </div>
+
+            <button type="submit" class="primary-btn login-btn">Sign In</button>
+        </form>
+
+        <div class="login-hint">
+            <p><strong>Default Accounts:</strong></p>
+            <small>Admin: <code>admin</code> / <code>admin123</code></small><br>
+            <small>Student: <code>student</code> / <code>student123</code></small>
+        </div>
+    </div>
+</body>
+</html>
